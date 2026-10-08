@@ -55,6 +55,12 @@ Cada mod em `NATIVE_MODS` (`lib/mods.js`) declara `id`, `name`, `description`, `
   - escudo de teclas e foco contra o focus trap do Reddit. Com shadow fechado, a checagem é contra o host, porque o evento chega retargetado.
 - **Painel nativo:** só é fechado se o nosso modal estava aberto. Na original, sair do feed também disparava esse clique.
 
+### 3.5b YouTube Foco (`youtube-foco`)
+- Na página `/watch`, centraliza o player e transforma o `#secondary` do próprio YouTube numa gaveta presa à direita, fechada por padrão. A aba que abre a gaveta fica num `<aise-mod>` com shadow fechado. Esc fecha, e navegar para outro vídeo também.
+- Esse é o primeiro mod que precisa de CSS na página: um `<style id="aise-mod-youtube-foco">` no `<head>`, porque o layout que muda é do YouTube. Toda regra depende de `html.aise-ytfoco` (há teste para isso), e desligar remove o style e a classe. O YouTube consegue detectar esse style; isso é aceitável, porque o mod não usa sessão nem dado do usuário.
+- Também esconde as telas finais do player (grade de vídeos sugeridos e cards do criador).
+- Não faz requisição, não lê o DOM fora do layout e não grava storage.
+
 ### 3.6 O que continua como está
 - O aiSiteEditor pede `<all_urls>` desde antes dos mods. Os mods não aumentam a superfície no papel, mas o ideal é mover hosts para `optional_host_permissions` e pedir permissão por mod ao ligar. Isso fica para a fase 2.
 - Content scripts da mesma extensão compartilham `chrome.storage.local`. O namespace é convenção, não barreira, e isso é aceitável porque todo mod é código revisado.
