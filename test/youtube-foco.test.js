@@ -32,6 +32,12 @@ function loadMod({ path = "/watch?v=abc", enabled = true, body = WATCH } = {}) {
     roots.push(r);
     return r;
   };
+  // Relógio manual: `runTimers()` dispara os timeouts pendentes (o do mouse parado).
+  const timers = new Map();
+  let nextId = 1;
+  win.setTimeout = (fn) => { const id = nextId++; timers.set(id, fn); return id; };
+  win.clearTimeout = (id) => timers.delete(id);
+  const runTimers = () => { const due = [...timers.values()]; timers.clear(); due.forEach((fn) => fn()); };
   win.eval(STYLES);
   win.eval(CONTENT);
   const setEnabled = (on) => {
@@ -43,8 +49,50 @@ function loadMod({ path = "/watch?v=abc", enabled = true, body = WATCH } = {}) {
     win.document.dispatchEvent(new win.Event("yt-navigate-finish"));
   };
   const tab = () => roots.at(-1)?.querySelector(".ytf-tab");
-  return { win, doc: win.document, html: win.document.documentElement, setEnabled, navigate, tab, roots };
+  const move = () => win.document.dispatchEvent(new win.MouseEvent("mousemove", { bubbles: true }));
+  return { win, doc: win.document, html: win.document.documentElement, setEnabled, navigate, tab, roots, runTimers, move };
 }
+
+test("mouse parado na página de vídeo esconde cabeçalho e aba; mexer traz de volta", () => {
+  const { html, tab, runTimers, move } = loadMod();
+  assert.ok(html.classList.contains("aise-ytfoco-watch"));
+  assert.ok(!html.classList.contains("aise-ytfoco-idle"));
+  runTimers();
+  assert.ok(html.classList.contains("aise-ytfoco-idle"));
+  assert.ok(tab().classList.contains("is-idle"));
+  move();
+  assert.ok(!html.classList.contains("aise-ytfoco-idle"));
+  assert.ok(!tab().classList.contains("is-idle"));
+  runTimers();
+  assert.ok(html.classList.contains("aise-ytfoco-idle"), "volta a sumir depois de parar de novo");
+});
+
+test("tecla não acorda o cabeçalho; gaveta aberta não deixa sumir", () => {
+  const { win, html, tab, runTimers } = loadMod();
+  runTimers();
+  win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "k" }));
+  assert.ok(html.classList.contains("aise-ytfoco-idle"));
+
+  const b = loadMod();
+  b.tab().click();
+  b.runTimers();
+  assert.ok(!b.html.classList.contains("aise-ytfoco-idle"));
+});
+
+test("fora de /watch o cabeçalho não some; desligar limpa as classes de idle", () => {
+  const { html, navigate, runTimers, move, setEnabled } = loadMod();
+  navigate("/");
+  move();
+  runTimers();
+  assert.ok(!html.classList.contains("aise-ytfoco-watch"));
+  assert.ok(!html.classList.contains("aise-ytfoco-idle"));
+  navigate("/watch?v=x");
+  runTimers();
+  assert.ok(html.classList.contains("aise-ytfoco-idle"));
+  setEnabled(false);
+  assert.ok(!html.classList.contains("aise-ytfoco-idle"));
+  assert.ok(!html.classList.contains("aise-ytfoco-watch"));
+});
 
 test("ligado na página de vídeo: CSS de foco aplicado e gaveta fechada por padrão", () => {
   const { doc, html, tab } = loadMod();

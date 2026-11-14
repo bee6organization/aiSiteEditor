@@ -45,6 +45,14 @@ html.aise-ytfoco.aise-ytfoco-open ytd-watch-flexy #secondary {
    Ficam escondidas também, e a aba as mostra no lugar. */
 html.aise-ytfoco:not(.aise-ytfoco-open) ytd-watch-flexy #below #related { display: none !important; }
 
+/* Mouse parado na página de vídeo: o cabeçalho (menu, logo, busca, perfil)
+   some devagar e volta rápido. Com foco dentro (digitando na busca) fica. */
+html.aise-ytfoco.aise-ytfoco-watch #masthead-container { transition: opacity .2s ease !important; }
+html.aise-ytfoco.aise-ytfoco-watch.aise-ytfoco-idle #masthead-container:not(:focus-within) {
+  opacity: 0 !important; pointer-events: none !important;
+  transition: opacity .8s ease !important;
+}
+
 /* Telas finais do player: grade de vídeos sugeridos e cards do criador. */
 html.aise-ytfoco .html5-video-player .ytp-endscreen-content,
 html.aise-ytfoco .html5-video-player .ytp-ce-element,
@@ -76,6 +84,8 @@ html.aise-ytfoco .html5-video-player .ytp-pause-overlay { display: none !importa
 .ytf-tab:focus-visible { outline: 2px solid #ee8d49; outline-offset: 2px; }
 .ytf-tab.is-open { right: var(--aise-ytfoco-w, min(434px, 92vw)); opacity: .9; }
 .ytf-tab.is-open svg { transform: rotate(180deg); }
+/* Some junto com o cabeçalho quando o mouse para (gaveta aberta não entra). */
+.ytf-tab.is-idle:not(.is-open) { opacity: 0; pointer-events: none; transition: opacity .8s ease; }
 @media (prefers-reduced-motion: reduce) {
   .ytf-tab, .ytf-tab svg { transition: none !important; }
 }

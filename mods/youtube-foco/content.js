@@ -12,6 +12,8 @@
 // - A gaveta é o próprio #secondary do YouTube, só reposicionado: rolagem
 //   infinita, playlist e chat ao vivo continuam funcionando.
 // - Padrão é sempre fechado: abrir outro vídeo fecha a gaveta.
+// - Com o mouse parado por 2,5 s, o cabeçalho do YouTube e a aba somem;
+//   mexer o mouse traz de volta.
 // - Desligar o mod no popup desmonta tudo na hora, sem recarregar a aba.
 (() => {
   'use strict';
@@ -23,6 +25,12 @@
   const ENABLED_KEY = 'mods:enabled';
   const ON_CLASS = 'aise-ytfoco';
   const OPEN_CLASS = 'aise-ytfoco-open';
+  const WATCH_CLASS = 'aise-ytfoco-watch';
+  const IDLE_CLASS = 'aise-ytfoco-idle';
+  const IDLE_MS = 2500;
+  // Só mouse conta como atividade: tecla de atalho do player ('k', setas) não
+  // deve trazer o cabeçalho de volta.
+  const ACTIVITY = ['mousemove', 'mousedown', 'wheel'];
   const STYLE_ID = 'aise-mod-youtube-foco';
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const CSS = (globalThis.__aiseModStyles || {})[MOD_ID] || { page: '', ui: '' };
@@ -45,6 +53,7 @@
   let open = false;
   let host = null;
   let tab = null;
+  let idleTimer = null;
 
   const isWatch = () => location.pathname === '/watch';
 
@@ -117,11 +126,50 @@
     }
   }
 
+  // Mouse parado na página de vídeo: o cabeçalho do YouTube e a aba somem
+  // (html.aise-ytfoco-idle). Qualquer movimento traz de volta. Não some com o
+  // mouse em cima do cabeçalho nem com a gaveta aberta; com foco dentro dele
+  // (digitando na busca) o CSS o mantém visível.
+  function headerBusy() {
+    if (open) return true;
+    const mh = document.getElementById('masthead-container');
+    try {
+      return !!(mh && mh.matches(':hover'));
+    } catch {
+      return false;
+    }
+  }
+
+  function setIdle(v) {
+    document.documentElement.classList.toggle(IDLE_CLASS, v);
+    if (tab) tab.classList.toggle('is-idle', v);
+  }
+
+  function scheduleIdle() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      idleTimer = null;
+      if (!running || !isWatch()) return;
+      if (headerBusy()) scheduleIdle();
+      else setIdle(true);
+    }, IDLE_MS);
+  }
+
+  function onActivity() {
+    if (!isWatch()) return;
+    if (document.documentElement.classList.contains(IDLE_CLASS)) setIdle(false);
+    scheduleIdle();
+  }
+
   // Mostra a aba só na página de vídeo e fecha a gaveta a cada navegação
   // (clicar numa recomendação volta para o vídeo limpo).
   function sync() {
     if (!running) return;
     setOpen(false);
+    setIdle(false);
+    document.documentElement.classList.toggle(WATCH_CLASS, isWatch());
+    if (isWatch()) scheduleIdle();
+    else clearTimeout(idleTimer);
     if (isWatch()) {
       if (!host || !host.isConnected) makeTab();
       paintTab();
@@ -144,6 +192,7 @@
     document.addEventListener('yt-navigate-finish', sync);
     window.addEventListener('popstate', sync);
     document.addEventListener('keydown', onKey);
+    for (const ev of ACTIVITY) document.addEventListener(ev, onActivity, { passive: true, capture: true });
     sync();
   }
 
@@ -153,7 +202,10 @@
     document.removeEventListener('yt-navigate-finish', sync);
     window.removeEventListener('popstate', sync);
     document.removeEventListener('keydown', onKey);
-    document.documentElement.classList.remove(ON_CLASS, OPEN_CLASS);
+    for (const ev of ACTIVITY) document.removeEventListener(ev, onActivity, { capture: true });
+    clearTimeout(idleTimer);
+    idleTimer = null;
+    document.documentElement.classList.remove(ON_CLASS, OPEN_CLASS, WATCH_CLASS, IDLE_CLASS);
     const st = document.getElementById(STYLE_ID);
     if (st) st.remove();
     if (host) host.remove();

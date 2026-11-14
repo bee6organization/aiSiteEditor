@@ -59,6 +59,7 @@ Cada mod em `NATIVE_MODS` (`lib/mods.js`) declara `id`, `name`, `description`, `
 - Na página `/watch`, centraliza o player e transforma o `#secondary` do próprio YouTube numa gaveta presa à direita, fechada por padrão. A aba que abre a gaveta fica num `<aise-mod>` com shadow fechado. Esc fecha, e navegar para outro vídeo também.
 - Esse é o primeiro mod que precisa de CSS na página: um `<style id="aise-mod-youtube-foco">` no `<head>`, porque o layout que muda é do YouTube. Toda regra depende de `html.aise-ytfoco` (há teste para isso), e desligar remove o style e a classe. O YouTube consegue detectar esse style; isso é aceitável, porque o mod não usa sessão nem dado do usuário.
 - Também esconde as telas finais do player (grade de vídeos sugeridos e cards do criador).
+- Mouse parado por 2,5 s em `/watch`: o `#masthead-container` e a aba somem com fade (`html.aise-ytfoco-idle`). Mexer, clicar ou rolar o mouse traz de volta; tecla não traz (os atalhos do player não acordam o cabeçalho). Não some com o mouse em cima do cabeçalho, com foco dentro dele (busca) nem com a gaveta aberta.
 - Não faz requisição, não lê o DOM fora do layout e não grava storage.
 
 ### 3.6 O que continua como está
